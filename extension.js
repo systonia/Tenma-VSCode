@@ -65,6 +65,15 @@ function listening(tenma, output) {
             }
         });
         tenma.on('error', (error) => reject(new Error(`tenma could not start: ${error.message}`)));
-        tenma.on('exit', (code) => reject(new Error(`tenma exited with code ${code}: ${stderr?.trim()}`)));
+        tenma.on('exit', (code) => reject(new Error(exited(code, stderr ?? ''))));
     });
+}
+
+// The first line says what went wrong; the rest (e.g. the usage) stays in the output panel
+function exited(code, stderr) {
+    if (stderr.includes('Unknown option: --inspect-wait')) {
+        return 'This tenma is too old to launch: it lacks --inspect-wait (Tenma 0.1.9 or later). Update it, point runtimeExecutable at a newer one, or use attach.';
+    }
+    const reason = stderr.trim().split('\n')[0];
+    return `tenma exited with code ${code}${reason ? `: ${reason}` : ''} (output panel "Tenma" has the rest)`;
 }
