@@ -7,6 +7,9 @@ const vscode = require('vscode');
 
 const SELECTOR = { language: 'php', scheme: 'file' };
 
+// The token types of tenma lsp, in its order (TOKEN_TYPES in stdlib/lsp.php)
+const TOKEN_TYPES = ['keyword', 'comment', 'variable', 'property', 'method', 'function', 'class', 'string', 'number', 'operator'];
+
 exports.start = (context, output) => {
     const diagnostics = vscode.languages.createDiagnosticCollection('tenma');
     let server = null;
@@ -71,6 +74,15 @@ exports.start = (context, output) => {
                 return result ? new vscode.Hover(new vscode.MarkdownString(result.contents.value)) : null;
             },
         }),
+        vscode.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
+            provideDocumentSemanticTokens: async (document) => {
+                if (!server || document.uri.scheme !== 'file') return null;
+                await server.ready;
+                server.sync(document);
+                const result = await server.request('textDocument/semanticTokens/full', { textDocument: { uri: document.uri.toString() } });
+                return result ? new vscode.SemanticTokens(new Uint32Array(result.data)) : null;
+            },
+        }, new vscode.SemanticTokensLegend(TOKEN_TYPES, [])),
         vscode.languages.registerDefinitionProvider(SELECTOR, {
             provideDefinition: async (document, position) => {
                 const result = await ask('textDocument/definition', document, position);
