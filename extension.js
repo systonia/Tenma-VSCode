@@ -33,7 +33,13 @@ exports.activate = (context) => {
                     vscode.debug.stopDebugging(session);
                 });
                 output.show(true);
-                await listening(tenma, output);
+                try {
+                    await listening(tenma, output);
+                } catch (error) {
+                    tenma.kill();
+                    started.delete(session.id);
+                    throw error;
+                }
                 return new vscode.DebugAdapterServer(port, '127.0.0.1');
             },
         }),
@@ -54,9 +60,13 @@ function freePort() {
     });
 }
 
+// How long tenma may take until its debugger listens: loading the script comes first
+const LISTENING_MS = 10000;
+
 // Shows tenma's output and resolves once its debugger listens; tenma says so on stderr
 function listening(tenma, output) {
     return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`tenma's debugger did not start within ${LISTENING_MS / 1000} s (output panel "Tenma" has what tenma said)`)), LISTENING_MS);
         // Kept until the debugger listens, for the error if tenma exits before
         let stderr = '';
         tenma.stdout.on('data', (data) => output.append(data.toString()));
@@ -66,6 +76,7 @@ function listening(tenma, output) {
             stderr += data;
             if (stderr.includes('debugger (DAP) listening on')) {
                 stderr = null;
+                clearTimeout(timer);
                 resolve();
             }
         });
