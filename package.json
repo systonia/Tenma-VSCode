@@ -1,0 +1,61 @@
+{
+  "name": "tenma",
+  "displayName": "Tenma",
+  "description": "Debug PHP apps running under Tenma",
+  "version": "0.1.0",
+  "publisher": "systonia",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://tenma.dev",
+  "repository": "https://github.com/systonia/Tenma-VSCode",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Debuggers"],
+  "keywords": ["php", "tenma", "debug"],
+  "main": "./extension.js",
+  "activationEvents": ["onDebug"],
+  "contributes": {
+    "breakpoints": [{ "language": "php" }],
+    "debuggers": [
+      {
+        "type": "tenma",
+        "label": "Tenma",
+        "languages": ["php"],
+        "configurationAttributes": {
+          "launch": {
+            "required": ["program"],
+            "properties": {
+              "program": { "type": "string", "description": "The PHP script to run", "default": "${workspaceFolder}/app.php" },
+              "args": { "type": "array", "items": { "type": "string" }, "description": "Arguments for the script", "default": [] },
+              "cwd": { "type": "string", "description": "Working directory, the workspace folder by default", "default": "${workspaceFolder}" },
+              "env": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Environment variables on top of VS Code's", "default": {} },
+              "watch": { "type": "boolean", "description": "Reload on file changes (tenma --watch); the breakpoints stay", "default": false },
+              "stopOnEntry": { "type": "boolean", "description": "Stop at the script's first statement", "default": false },
+              "runtimeExecutable": { "type": "string", "description": "The tenma binary, found on the PATH by default", "default": "tenma" }
+            }
+          },
+          "attach": {
+            "properties": {
+              "host": { "type": "string", "description": "Address of tenma --inspect", "default": "127.0.0.1" },
+              "port": { "type": "number", "description": "Port of tenma --inspect", "default": 9229 },
+              "stopOnEntry": { "type": "boolean", "description": "With --inspect-wait or --inspect-brk: stop at the script's first statement", "default": false }
+            }
+          }
+        },
+        "initialConfigurations": [
+          { "type": "tenma", "request": "launch", "name": "Tenma", "program": "${workspaceFolder}/app.php", "watch": true }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Tenma: launch",
+            "description": "Start a script under tenma and debug it",
+            "body": { "type": "tenma", "request": "launch", "name": "Tenma", "program": "^\"\\${workspaceFolder}/app.php\"", "watch": true }
+          },
+          {
+            "label": "Tenma: attach",
+            "description": "Attach to tenma --inspect",
+            "body": { "type": "tenma", "request": "attach", "name": "Attach to tenma --inspect", "port": 9229 }
+          }
+        ]
+      }
+    ]
+  }
+}
