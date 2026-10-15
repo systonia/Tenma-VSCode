@@ -114,11 +114,17 @@ class Server {
             output.append(data.toString());
             if (stderr.length < 1000) stderr += data;
         });
-        this.process.on('error', (error) => output.appendLine(`tenma lsp could not start: ${error.message}`));
+        // A binary that can't be started emits error but no exit: without this the requests would wait forever,
+        // and every completion with them, the PHP extension's too
+        this.process.on('error', (error) => {
+            output.appendLine(`tenma lsp could not start: ${error.message}`);
+            if (this.process.pid !== undefined) return;
+            output.appendLine('Is tenma on the PATH VS Code sees? Otherwise set "tenma.executable" to its full path.');
+            this.end();
+            ended(false);
+        });
         this.process.on('exit', (code) => {
-            for (const { resolve } of this.pending.values()) resolve(null);
-            this.pending.clear();
-            this.diagnostics.clear();
+            this.end();
             if (this.stopping) {
                 ended(false);
             } else if (stderr.includes('lsp: No such file')) {
@@ -133,6 +139,13 @@ class Server {
             this.notify('initialized', {});
             for (const document of vscode.workspace.textDocuments) this.sync(document);
         });
+    }
+
+    // The pending requests get null; the server's diagnostics go with it
+    end() {
+        for (const { resolve } of this.pending.values()) resolve(null);
+        this.pending.clear();
+        this.diagnostics.clear();
     }
 
     send(message) {
