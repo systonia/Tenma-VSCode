@@ -50,6 +50,17 @@ For a Tenma started elsewhere, e.g. in a container: `tenma --inspect app.php` (o
 
 `host` (default `127.0.0.1`) and `port` (default `9229`) match `--inspect=host:port`. Only open the debugger to the network when you have to: whoever reaches it can run code.
 
+## Language server
+
+In a trusted workspace the extension also starts `tenma lsp` for PHP files (Tenma 0.1.9 or later). It runs next to your PHP extension (Intelephense, PHP Tools) and adds what that one cannot know, such as `$this->` in a template whose class a package names: [Waypoint Live](https://github.com/systonia/Waypoint-Live) does that for its components, with completion of actions, tags and inputs and with its checks in the Problems panel. `tenma lsp` loads the project's autoloader, so it does not start in an untrusted workspace.
+
+| Setting | |
+|---|---|
+| `tenma.lsp.enable` | Start `tenma lsp`, on by default |
+| `tenma.executable` | The `tenma` binary for it, from the `PATH` by default |
+
+"Tenma: Restart Language Server" starts it again, for example after updating Tenma. Its messages go to the output panel "Tenma".
+
 ## Building
 
 Every tag `v*` builds a GitHub release with the `.vsix`, its version taken from the tag. By hand:

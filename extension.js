@@ -1,11 +1,14 @@
 // VS Code only talks to debuggers it knows: this registers the type "tenma" and points it at the
 // DAP server of tenma --inspect, which does all the debugging. "launch" starts tenma itself first.
+// lsp.js starts tenma's language server for PHP files.
 const { spawn } = require('child_process');
 const net = require('net');
 const vscode = require('vscode');
+const lsp = require('./lsp');
 
 exports.activate = (context) => {
     const output = vscode.window.createOutputChannel('Tenma');
+    lsp.start(context, output);
     // The tenma started for each launch session, ended with it
     const started = new Map();
     context.subscriptions.push(

@@ -1,19 +1,33 @@
 {
   "name": "tenma",
   "displayName": "Tenma",
-  "description": "Debug PHP apps running under Tenma",
+  "description": "Debug PHP apps running under Tenma, and what tenma lsp adds to PHP files",
   "version": "0.1.0",
   "publisher": "systonia",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://tenma.dev",
   "repository": "https://github.com/systonia/Tenma-VSCode",
   "engines": { "vscode": "^1.80.0" },
-  "categories": ["Debuggers"],
+  "categories": ["Debuggers", "Programming Languages"],
   "keywords": ["php", "tenma", "debug"],
   "main": "./extension.js",
-  "activationEvents": ["onDebug"],
+  "activationEvents": ["onDebug", "onLanguage:php"],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "tenma lsp loads the project's autoloader and with it the project's code, so it only starts in a trusted workspace. Debugging works either way."
+    }
+  },
   "contributes": {
     "breakpoints": [{ "language": "php" }],
+    "configuration": {
+      "title": "Tenma",
+      "properties": {
+        "tenma.lsp.enable": { "type": "boolean", "default": true, "description": "Start tenma lsp for PHP files: $this in templates and what packages add (Tenma 0.1.9 or later)" },
+        "tenma.executable": { "type": "string", "default": "tenma", "description": "The tenma binary for tenma lsp, found on the PATH by default" }
+      }
+    },
+    "commands": [{ "command": "tenma.restartLanguageServer", "title": "Tenma: Restart Language Server" }],
     "debuggers": [
       {
         "type": "tenma",
