@@ -39,12 +39,16 @@ exports.start = (context, output) => {
         server = null;
         run();
     };
-    const ask = async (method, document, position) => {
-        if (!server || document.uri.scheme !== 'file') return null;
-        await server.ready;
-        server.sync(document);
-        return server.request(method, { textDocument: { uri: document.uri.toString() }, position: { line: position.line, character: position.character } });
+    // The server that got ready answers: one that ended or was replaced meanwhile answers nothing
+    const ask = async (method, document, params) => {
+        const asked = server;
+        if (!asked || document.uri.scheme !== 'file') return null;
+        await asked.ready;
+        if (server !== asked) return null;
+        asked.sync(document);
+        return asked.request(method, { textDocument: { uri: document.uri.toString() }, ...params });
     };
+    const at = (position) => ({ position: { line: position.line, character: position.character } });
     context.subscriptions.push(
         diagnostics,
         { dispose: () => server?.stop() },
@@ -59,7 +63,7 @@ exports.start = (context, output) => {
         vscode.workspace.onDidCloseTextDocument((document) => server?.close(document)),
         vscode.languages.registerCompletionItemProvider(SELECTOR, {
             provideCompletionItems: async (document, position) => {
-                const result = await ask('textDocument/completion', document, position);
+                const result = await ask('textDocument/completion', document, at(position));
                 return (result?.items ?? []).map((item) => {
                     const completion = new vscode.CompletionItem(item.label, (item.kind ?? 1) - 1);
                     completion.detail = item.detail;
@@ -70,22 +74,19 @@ exports.start = (context, output) => {
         }, '>', '"', '<', ' ', '-'),
         vscode.languages.registerHoverProvider(SELECTOR, {
             provideHover: async (document, position) => {
-                const result = await ask('textDocument/hover', document, position);
+                const result = await ask('textDocument/hover', document, at(position));
                 return result ? new vscode.Hover(new vscode.MarkdownString(result.contents.value)) : null;
             },
         }),
         vscode.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
             provideDocumentSemanticTokens: async (document) => {
-                if (!server || document.uri.scheme !== 'file') return null;
-                await server.ready;
-                server.sync(document);
-                const result = await server.request('textDocument/semanticTokens/full', { textDocument: { uri: document.uri.toString() } });
+                const result = await ask('textDocument/semanticTokens/full', document, {});
                 return result ? new vscode.SemanticTokens(new Uint32Array(result.data)) : null;
             },
         }, new vscode.SemanticTokensLegend(TOKEN_TYPES, [])),
         vscode.languages.registerDefinitionProvider(SELECTOR, {
             provideDefinition: async (document, position) => {
-                const result = await ask('textDocument/definition', document, position);
+                const result = await ask('textDocument/definition', document, at(position));
                 return result ? new vscode.Location(vscode.Uri.parse(result.uri), new vscode.Position(result.range.start.line, result.range.start.character)) : null;
             },
         }),
