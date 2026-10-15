@@ -38,6 +38,8 @@ exports.activate = (context) => {
             },
         }),
         vscode.debug.onDidTerminateDebugSession((session) => started.get(session.id)?.kill()),
+        // A reload or a closed window ends the extension, not the processes it started: they would keep their ports
+        { dispose: () => started.forEach((tenma) => tenma.kill()) },
     );
 };
 

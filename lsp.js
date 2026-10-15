@@ -95,7 +95,7 @@ class Server {
         this.process = spawn(executable, ['lsp'], { cwd: folder.uri.fsPath });
         this.process.stdout.on('data', (data) => this.receive(data));
         // Writing to a server that has ended: the exit handler below says why
-        this.process.stdin.on('error', () => {});
+        this.process.stdin.on('error', (error) => output.appendLine(`tenma lsp: writing failed: ${error.message}`));
         // The start of stderr, to tell a Tenma without lsp from a crash
         let stderr = '';
         this.process.stderr.on('data', (data) => {
