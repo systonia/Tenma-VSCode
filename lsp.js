@@ -47,9 +47,11 @@ exports.start = (context, output) => {
         });
         server = started;
     };
+    // By hand: a fresh start, with its own allowance of crashes, and none of the old server's problems
     const restart = () => {
         server?.stop();
         server = null;
+        diagnostics.clear();
         run();
     };
     // The server that got ready answers: one that ended or was replaced meanwhile answers nothing
@@ -155,11 +157,11 @@ class Server {
         });
     }
 
-    // The pending requests get null; the server's diagnostics go with it
+    // The pending requests get null; the server's diagnostics go with it, unless a new server has them now
     end() {
         for (const { resolve } of this.pending.values()) resolve(null);
         this.pending.clear();
-        this.diagnostics.clear();
+        if (!this.stopping) this.diagnostics.clear();
     }
 
     send(message) {
