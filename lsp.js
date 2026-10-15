@@ -25,6 +25,8 @@ const inTime = (promise, token) => new Promise((resolve) => {
 
 exports.start = (context, output) => {
     const diagnostics = vscode.languages.createDiagnosticCollection('tenma');
+    // Asks VS Code for the colours again: editors opened before the server was ready have none from it
+    const tokensChanged = new vscode.EventEmitter();
     let server = null;
     // When the server ended on its own lately: it starts again unless that happens too often
     const crashes = [];
@@ -48,6 +50,9 @@ exports.start = (context, output) => {
             }
         });
         server = started;
+        started.ready.then(() => {
+            if (server === started) tokensChanged.fire();
+        });
     };
     // By hand: a fresh start, with its own allowance of crashes, and none of the old server's problems
     const restart = () => {
@@ -68,6 +73,7 @@ exports.start = (context, output) => {
     const at = (position) => ({ position: { line: position.line, character: position.character } });
     context.subscriptions.push(
         diagnostics,
+        tokensChanged,
         { dispose: () => server?.stop() },
         vscode.commands.registerCommand('tenma.restartLanguageServer', restart),
         vscode.workspace.onDidGrantWorkspaceTrust(run),
@@ -96,6 +102,7 @@ exports.start = (context, output) => {
             },
         }),
         vscode.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
+            onDidChangeSemanticTokens: tokensChanged.event,
             provideDocumentSemanticTokens: async (document, token) => {
                 const result = await ask('textDocument/semanticTokens/full', document, {}, token);
                 // VS Code takes the tokens of one provider only: nothing to colour leaves the PHP extension's
