@@ -81,7 +81,8 @@ exports.start = (context, output) => {
         vscode.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
             provideDocumentSemanticTokens: async (document) => {
                 const result = await ask('textDocument/semanticTokens/full', document, {});
-                return result ? new vscode.SemanticTokens(new Uint32Array(result.data)) : null;
+                // VS Code takes the tokens of one provider only: nothing to colour leaves the PHP extension's
+                return result?.data?.length ? new vscode.SemanticTokens(new Uint32Array(result.data)) : null;
             },
         }, new vscode.SemanticTokensLegend(TOKEN_TYPES, [])),
         vscode.languages.registerDefinitionProvider(SELECTOR, {

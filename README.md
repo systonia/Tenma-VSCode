@@ -52,7 +52,7 @@ For a Tenma started elsewhere, e.g. in a container: `tenma --inspect app.php` (o
 
 ## Language server
 
-In a trusted workspace the extension also starts `tenma lsp` for PHP files (Tenma 0.1.9 or later). It runs next to your PHP extension (Intelephense, PHP Tools) and adds what that one cannot know, such as `$this->` in a template whose class a package names: [Waypoint Live](https://github.com/systonia/Waypoint-Live) does that for its components, with completion of actions, tags and inputs, colours for its template directives and its checks in the Problems panel. `tenma lsp` loads the project's autoloader, so it does not start in an untrusted workspace.
+In a trusted workspace the extension also starts `tenma lsp` for PHP files (Tenma 0.1.9 or later). It runs next to your PHP extension (Intelephense, PHP Tools) and adds what that one cannot know, such as `$this->` in a template whose class a package names: [Waypoint Live](https://github.com/systonia/Waypoint-Live) does that for its components, with completion of actions, tags and inputs, colours for its template directives and its checks in the Problems panel. `tenma lsp` loads the project's autoloader, so it does not start in an untrusted workspace. VS Code shows the semantic colours of one extension per file: in a template Tenma colours, the PHP extension's semantic colours are left out there (its grammar colours stay); in every other PHP file Tenma steps aside.
 
 | Setting | |
 |---|---|
