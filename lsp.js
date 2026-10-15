@@ -39,7 +39,7 @@ exports.start = (context, output) => {
             const now = Date.now();
             crashes.push(now);
             while (crashes[0] < now - 60000) crashes.shift();
-            if (crashes.length <= 3) {
+            if (crashes.length < 3) {
                 setTimeout(run, 1000);
             } else {
                 output.appendLine('tenma lsp ended three times within a minute; "Tenma: Restart Language Server" starts it again.');
@@ -51,6 +51,7 @@ exports.start = (context, output) => {
     const restart = () => {
         server?.stop();
         server = null;
+        crashes.length = 0;
         diagnostics.clear();
         run();
     };
