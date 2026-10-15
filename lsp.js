@@ -10,6 +10,19 @@ const SELECTOR = { language: 'php', scheme: 'file' };
 // The token types of tenma lsp, in its order (TOKEN_TYPES in stdlib/lsp.php)
 const TOKEN_TYPES = ['keyword', 'comment', 'variable', 'property', 'method', 'function', 'class', 'string', 'number', 'operator'];
 
+// VS Code waits for every provider of a kind, the PHP extension's too: an answer later than this counts as none
+const ANSWER_MS = 1500;
+
+// $promise, or null once the time is up or the request was cancelled
+const inTime = (promise, token) => new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ANSWER_MS);
+    token?.onCancellationRequested(() => resolve(null));
+    promise.then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+    });
+});
+
 exports.start = (context, output) => {
     const diagnostics = vscode.languages.createDiagnosticCollection('tenma');
     let server = null;
@@ -40,13 +53,12 @@ exports.start = (context, output) => {
         run();
     };
     // The server that got ready answers: one that ended or was replaced meanwhile answers nothing
-    const ask = async (method, document, params) => {
+    const ask = async (method, document, params, token) => {
         const asked = server;
         if (!asked || document.uri.scheme !== 'file') return null;
-        await asked.ready;
-        if (server !== asked) return null;
+        if (await inTime(asked.ready.then(() => true), token) === null || server !== asked) return null;
         asked.sync(document);
-        return asked.request(method, { textDocument: { uri: document.uri.toString() }, ...params });
+        return inTime(asked.request(method, { textDocument: { uri: document.uri.toString() }, ...params }), token);
     };
     const at = (position) => ({ position: { line: position.line, character: position.character } });
     context.subscriptions.push(
@@ -62,8 +74,8 @@ exports.start = (context, output) => {
         vscode.workspace.onDidSaveTextDocument((document) => server?.notify('textDocument/didSave', { textDocument: { uri: document.uri.toString() } })),
         vscode.workspace.onDidCloseTextDocument((document) => server?.close(document)),
         vscode.languages.registerCompletionItemProvider(SELECTOR, {
-            provideCompletionItems: async (document, position) => {
-                const result = await ask('textDocument/completion', document, at(position));
+            provideCompletionItems: async (document, position, token) => {
+                const result = await ask('textDocument/completion', document, at(position), token);
                 return (result?.items ?? []).map((item) => {
                     const completion = new vscode.CompletionItem(item.label, (item.kind ?? 1) - 1);
                     completion.detail = item.detail;
@@ -73,21 +85,21 @@ exports.start = (context, output) => {
             },
         }, '>', '"', '<', ' ', '-'),
         vscode.languages.registerHoverProvider(SELECTOR, {
-            provideHover: async (document, position) => {
-                const result = await ask('textDocument/hover', document, at(position));
+            provideHover: async (document, position, token) => {
+                const result = await ask('textDocument/hover', document, at(position), token);
                 return result ? new vscode.Hover(new vscode.MarkdownString(result.contents.value)) : null;
             },
         }),
         vscode.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
-            provideDocumentSemanticTokens: async (document) => {
-                const result = await ask('textDocument/semanticTokens/full', document, {});
+            provideDocumentSemanticTokens: async (document, token) => {
+                const result = await ask('textDocument/semanticTokens/full', document, {}, token);
                 // VS Code takes the tokens of one provider only: nothing to colour leaves the PHP extension's
                 return result?.data?.length ? new vscode.SemanticTokens(new Uint32Array(result.data)) : null;
             },
         }, new vscode.SemanticTokensLegend(TOKEN_TYPES, [])),
         vscode.languages.registerDefinitionProvider(SELECTOR, {
-            provideDefinition: async (document, position) => {
-                const result = await ask('textDocument/definition', document, at(position));
+            provideDefinition: async (document, position, token) => {
+                const result = await ask('textDocument/definition', document, at(position), token);
                 return result ? new vscode.Location(vscode.Uri.parse(result.uri), new vscode.Position(result.range.start.line, result.range.start.character)) : null;
             },
         }),
