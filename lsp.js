@@ -10,12 +10,24 @@ const SELECTOR = { language: 'php', scheme: 'file' };
 exports.start = (context, output) => {
     const diagnostics = vscode.languages.createDiagnosticCollection('tenma');
     let server = null;
+    // When the server ended on its own lately: it starts again unless that happens too often
+    const crashes = [];
     const run = () => {
         const enabled = vscode.workspace.getConfiguration('tenma').get('lsp.enable', true);
         const folder = vscode.workspace.workspaceFolders?.[0];
         if (!enabled || !vscode.workspace.isTrusted || !folder || server) return;
-        const started = new Server(folder, output, diagnostics, () => {
-            if (server === started) server = null;
+        const started = new Server(folder, output, diagnostics, (unexpected) => {
+            if (server !== started) return;
+            server = null;
+            if (!unexpected) return;
+            const now = Date.now();
+            crashes.push(now);
+            while (crashes[0] < now - 60000) crashes.shift();
+            if (crashes.length <= 3) {
+                setTimeout(run, 1000);
+            } else {
+                output.appendLine('tenma lsp ended three times within a minute; "Tenma: Restart Language Server" starts it again.');
+            }
         });
         server = started;
     };
@@ -84,14 +96,26 @@ class Server {
         this.process.stdout.on('data', (data) => this.receive(data));
         // Writing to a server that has ended: the exit handler below says why
         this.process.stdin.on('error', () => {});
-        this.process.stderr.on('data', (data) => output.append(data.toString()));
+        // The start of stderr, to tell a Tenma without lsp from a crash
+        let stderr = '';
+        this.process.stderr.on('data', (data) => {
+            output.append(data.toString());
+            if (stderr.length < 1000) stderr += data;
+        });
         this.process.on('error', (error) => output.appendLine(`tenma lsp could not start: ${error.message}`));
         this.process.on('exit', (code) => {
             for (const { resolve } of this.pending.values()) resolve(null);
             this.pending.clear();
             this.diagnostics.clear();
-            if (!this.stopping) output.appendLine(`tenma lsp ended with code ${code}. It needs Tenma 0.1.9 or later; "Tenma: Restart Language Server" or a changed setting starts it again.`);
-            ended();
+            if (this.stopping) {
+                ended(false);
+            } else if (stderr.includes('lsp: No such file')) {
+                output.appendLine('This tenma has no language server: tenma lsp needs Tenma 0.1.9 or later. "Tenma: Restart Language Server" starts it after an update.');
+                ended(false);
+            } else {
+                output.appendLine(`tenma lsp ended with code ${code}, starting it again`);
+                ended(true);
+            }
         });
         this.ready = this.request('initialize', { processId: process.pid, rootUri: folder.uri.toString(), capabilities: {} }).then(() => {
             this.notify('initialized', {});
