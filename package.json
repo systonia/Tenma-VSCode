@@ -11,7 +11,7 @@
   "categories": ["Debuggers", "Programming Languages"],
   "keywords": ["php", "tenma", "debug"],
   "main": "./extension.js",
-  "activationEvents": ["onDebug", "onLanguage:php"],
+  "activationEvents": ["onDebugResolve:tenma", "onLanguage:php"],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",

@@ -31,7 +31,9 @@ exports.start = (context, output) => {
     const run = () => {
         const enabled = vscode.workspace.getConfiguration('tenma').get('lsp.enable', true);
         const folder = vscode.workspace.workspaceFolders?.[0];
-        if (!enabled || !vscode.workspace.isTrusted || !folder || server) return;
+        // Only once a PHP file is open: debugging alone, or another language, needs no language server
+        const php = vscode.workspace.textDocuments.some((document) => document.languageId === 'php');
+        if (!enabled || !vscode.workspace.isTrusted || !folder || !php || server) return;
         const started = new Server(folder, output, diagnostics, (unexpected) => {
             if (server !== started) return;
             server = null;
@@ -72,7 +74,7 @@ exports.start = (context, output) => {
         vscode.workspace.onDidChangeConfiguration((event) => {
             if (event.affectsConfiguration('tenma')) restart();
         }),
-        vscode.workspace.onDidOpenTextDocument((document) => server?.sync(document)),
+        vscode.workspace.onDidOpenTextDocument((document) => (server ? server.sync(document) : document.languageId === 'php' && run())),
         vscode.workspace.onDidChangeTextDocument((event) => server?.sync(event.document)),
         vscode.workspace.onDidSaveTextDocument((document) => server?.notify('textDocument/didSave', { textDocument: { uri: document.uri.toString() } })),
         vscode.workspace.onDidCloseTextDocument((document) => server?.close(document)),
