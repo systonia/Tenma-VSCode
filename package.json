@@ -15,7 +15,8 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "tenma lsp loads the project's autoloader and with it the project's code, so it only starts in a trusted workspace. Debugging works either way."
+      "description": "tenma lsp loads the project's autoloader and with it the project's code, so it only starts in a trusted workspace, and the workspace cannot choose the tenma binary.",
+      "restrictedConfigurations": ["tenma.executable"]
     }
   },
   "contributes": {
