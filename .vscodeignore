@@ -1,3 +1,4 @@
 .gitignore
 cliff.toml
 *.vsix
+.github/

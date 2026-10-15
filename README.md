@@ -52,6 +52,8 @@ For a Tenma started elsewhere, e.g. in a container: `tenma --inspect app.php` (o
 
 ## Building
 
+Every tag `v*` builds a GitHub release with the `.vsix`, its version taken from the tag. By hand:
+
 ```bash
 npx @vscode/vsce package
 code --install-extension tenma-*.vsix
