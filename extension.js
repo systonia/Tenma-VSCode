@@ -28,7 +28,9 @@ exports.activate = (context) => {
                     env: { ...process.env, ...config.env },
                 });
                 started.set(session.id, tenma);
+                // A restarted session keeps its id: the old tenma, still draining, must not end the new one
                 tenma.on('exit', () => {
+                    if (started.get(session.id) !== tenma) return;
                     started.delete(session.id);
                     vscode.debug.stopDebugging(session);
                 });
@@ -37,7 +39,7 @@ exports.activate = (context) => {
                     await listening(tenma, output);
                 } catch (error) {
                     tenma.kill();
-                    started.delete(session.id);
+                    if (started.get(session.id) === tenma) started.delete(session.id);
                     throw error;
                 }
                 return new vscode.DebugAdapterServer(port, '127.0.0.1');
