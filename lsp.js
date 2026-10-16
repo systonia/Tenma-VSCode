@@ -231,7 +231,8 @@ class Server {
             if (message.error) this.output.appendLine(`tenma lsp: ${message.error.message}`);
             return;
         }
-        if (message.method === 'textDocument/publishDiagnostics') {
+        // A stopping server may still finish a queued change: its problems would outlive the clear in restart()
+        if (message.method === 'textDocument/publishDiagnostics' && !this.stopping) {
             const uri = vscode.Uri.parse(message.params.uri);
             this.diagnostics.set(uri, message.params.diagnostics.map((found) => {
                 const range = new vscode.Range(found.range.start.line, found.range.start.character, found.range.end.line, found.range.end.character);
