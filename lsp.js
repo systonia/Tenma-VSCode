@@ -226,8 +226,17 @@ class Server {
             if (end < 0) return;
             const length = Number(/Content-Length: (\d+)/i.exec(this.buffer.subarray(0, end).toString())?.[1] ?? 0);
             if (this.buffer.length < end + 4 + length) return;
-            const message = JSON.parse(this.buffer.subarray(end + 4, end + 4 + length).toString());
+            const body = this.buffer.subarray(end + 4, end + 4 + length).toString();
             this.buffer = this.buffer.subarray(end + 4 + length);
+            let message;
+            try {
+                message = JSON.parse(body);
+            } catch (error) {
+                // The stream is out of step now, and every request would wait for its time: a new server starts clean
+                this.output.appendLine(`tenma lsp sent a message that is no JSON: ${error.message}`);
+                this.process.kill();
+                return;
+            }
             this.handle(message);
         }
     }
