@@ -30,22 +30,29 @@ exports.start = (context, output) => {
     let server = null;
     // When the server ended on its own lately: it starts again unless that happens too often
     const crashes = [];
+    // Set once the server crashed too often or cannot start: only a restart by hand tries again,
+    // not every PHP file that opens
+    let gaveUp = false;
     const run = () => {
         const enabled = vscode.workspace.getConfiguration('tenma').get('lsp.enable', true);
         const folder = vscode.workspace.workspaceFolders?.[0];
         // Only once a PHP file is open: debugging alone, or another language, needs no language server
         const php = vscode.workspace.textDocuments.some((document) => document.languageId === 'php');
-        if (!enabled || !vscode.workspace.isTrusted || !folder || !php || server) return;
+        if (!enabled || !vscode.workspace.isTrusted || !folder || !php || server || gaveUp) return;
         const started = new Server(folder, output, diagnostics, (unexpected) => {
             if (server !== started) return;
             server = null;
-            if (!unexpected) return;
+            if (!unexpected) {
+                gaveUp = true;
+                return;
+            }
             const now = Date.now();
             crashes.push(now);
             while (crashes[0] < now - 60000) crashes.shift();
             if (crashes.length < 3) {
                 setTimeout(run, 1000);
             } else {
+                gaveUp = true;
                 output.appendLine('tenma lsp ended three times within a minute; "Tenma: Restart Language Server" starts it again.');
             }
         });
@@ -59,6 +66,7 @@ exports.start = (context, output) => {
         server?.stop();
         server = null;
         crashes.length = 0;
+        gaveUp = false;
         diagnostics.clear();
         run();
     };
