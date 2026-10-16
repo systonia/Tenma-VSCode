@@ -151,8 +151,10 @@ class Server {
         this.process.stdin.on('error', (error) => output.appendLine(`tenma lsp: writing failed: ${error.message}`));
         // The start of stderr, to tell a Tenma without lsp from a crash
         let stderr = '';
+        // Decoded across chunks: a character split between two would show as two broken ones
+        this.process.stderr.setEncoding('utf8');
         this.process.stderr.on('data', (data) => {
-            output.append(data.toString());
+            output.append(data);
             if (stderr.length < 1000) stderr += data;
         });
         // A binary that can't be started emits error but no exit: without this the requests would wait forever,

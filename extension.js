@@ -71,9 +71,12 @@ function listening(tenma, output) {
         const timer = setTimeout(() => reject(new Error(`tenma's debugger did not start within ${LISTENING_MS / 1000} s (output panel "Tenma" has what tenma said)`)), LISTENING_MS);
         // Kept until the debugger listens, for the error if tenma exits before
         let stderr = '';
-        tenma.stdout.on('data', (data) => output.append(data.toString()));
+        // Decoded across chunks: a character split between two would show as two broken ones
+        tenma.stdout.setEncoding('utf8');
+        tenma.stderr.setEncoding('utf8');
+        tenma.stdout.on('data', (data) => output.append(data));
         tenma.stderr.on('data', (data) => {
-            output.append(data.toString());
+            output.append(data);
             if (stderr === null) return;
             stderr += data;
             if (stderr.includes('debugger (DAP) listening on')) {
