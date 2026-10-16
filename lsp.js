@@ -3,6 +3,7 @@
 // VS Code merges its answers with those of the PHP extension. Only in trusted workspaces: the server
 // loads the project's autoloader, and with it the project's code.
 const { spawn } = require('child_process');
+const fs = require('fs');
 const vscode = require('vscode');
 
 const SELECTOR = { language: 'php', scheme: 'file' };
@@ -39,6 +40,12 @@ exports.start = (context, output) => {
         // Only once a PHP file is open: debugging alone, or another language, needs no language server
         const php = vscode.workspace.textDocuments.some((document) => document.languageId === 'php');
         if (!enabled || !vscode.workspace.isTrusted || !folder || !php || server || gaveUp) return;
+        // The server runs in the folder: one that is gone, or not on this disk, makes spawn fail as if tenma were missing
+        if (folder.uri.scheme !== 'file' || !fs.existsSync(folder.uri.fsPath)) {
+            output.appendLine(`tenma lsp needs the workspace folder on this disk, and ${folder.uri.toString()} is not.`);
+            gaveUp = true;
+            return;
+        }
         const started = new Server(folder, output, diagnostics, (unexpected) => {
             if (server !== started) return;
             server = null;
