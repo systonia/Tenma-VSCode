@@ -1,6 +1,6 @@
 # Tenma for VS Code
 
-Debug PHP apps running under [Tenma](https://tenma.dev): breakpoints, steps, variables, watch expressions and the debug console, with every request, timer and `Tenma::async()` task as a thread of its own. Tenma's `--inspect` does the debugging; this extension connects VS Code to it.
+Debug PHP apps running under [Tenma](https://tenma.dev): breakpoints, steps, variables, watch expressions and the debug console, with every request, timer and `Threading\Task::run()` task as a thread of its own. Tenma's `--inspect` does the debugging; this extension connects VS Code to it.
 
 Needs Tenma 0.1.9 or later on the `PATH`. For Tenma's PHP API in Intelephense, PhpStorm and PHPStan: `composer require --dev tenma/stubs`.
 
